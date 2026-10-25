@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head>
+<body>
 <title>AI 产品红黑榜</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -107,6 +111,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   min-width: 0;
 }
 .tile.big { grid-column: span 2; grid-row: span 2; }
+.tile.has-char::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: var(--char) right bottom / auto 88% no-repeat; opacity: .13; filter: saturate(.8); }
+.tile.big.has-char::before { background-size: auto 92%; background-position: 92% bottom; opacity: .12; }
+.tile-head { position: relative; z-index: 1; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tile.has-char::before { opacity: .16; } }
 .board .tile { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
 .tile.wide { grid-column: span 2; }
 .tile.tall { grid-row: span 2; }
@@ -825,6 +833,7 @@ const PRODUCTS = [
   ["xiaoyunque","小云雀"],["libtv","LibTV"],["tapnow","TapNow"],["oiioii","OiiOii"],["today-ai","Today AI"],["elys","Elys"]
 ];
 const NAME = Object.fromEntries(PRODUCTS.map(p => [p[0], p[1]]));
+const CHARS = new Set(["antafu", "chatgpt", "deepseek", "diandian", "doubao", "dumate", "gemini", "genspark", "jianying", "jimeng", "kimi", "kling", "libtv", "manus", "minimax", "muse", "qianwen", "qianwen-office", "qoder", "quark", "stepfun", "tapnow", "today-ai", "vidu", "weixin-xiaowei", "workbuddy", "xiaohuanxiong", "xiaomei", "xiaoyunque", "yuanbao", "zcode"]);
 // 所属公司（空字符串 = 待确认，可在此补充）
 const COMPANY = {
   chatgpt: "OpenAI", claude: "Anthropic", gemini: "Google", muse: "", "today-ai": "", qoder: "阿里巴巴", zcode: "智谱", tripo: "VAST", meshy: "Meshy",
@@ -905,6 +914,7 @@ function buildBoard() {
   for (const [id, name, size] of PRODUCTS) {
     const el = document.createElement("div");
     el.className = "tile" + (size ? " " + size : "");
+    if (CHARS.has(id)) { el.classList.add("has-char"); el.style.setProperty("--char", `url("chars/${id}.webp")`); }  // AI 娘形象做淡化背景
     el.tabIndex = 0;
     el.setAttribute("role", "button");
     el.dataset.pid = id;
@@ -2774,3 +2784,6 @@ buildBoard(); render();
   }, e => {});
 })();
 </script>
+
+</body>
+</html>

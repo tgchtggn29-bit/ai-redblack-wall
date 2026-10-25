@@ -4,6 +4,8 @@
 
 ![首页](docs/screenshots/01_hero_blind.jpg)
 
+▶ **宣传讲解视频（87 秒，带字幕）**：[docs/video/promo.mp4](docs/video/promo.mp4)
+
 ## 截图
 
 | 举牌贴纸，提交后才生效 | 提交后揭晓全网真实打卡墙 |
@@ -50,6 +52,7 @@
 ```
 site/                 网站本体
   index.html          整个页面（样式、脚本、桌宠图片都在里面，约 230KB）
+  chars/*.webp        各产品 AI 娘形象（格子里的淡化背景图）
   music/*.mp3         4 首原创 BGM（嘻哈打卡 / 放克迪斯科 / 管风琴律动 / 尤克里里探店）
 server/               自建服务器时用的防刷后台（Node.js）
   server.js           按 IP / 账号 / 设备限流 + 封禁 + 数据校验，参数在文件开头 LIMITS
@@ -137,6 +140,7 @@ node server.js                                     # 无 Redis（单机内存计
 ## 版权与素材说明
 - BGM、彩蛋小曲、节奏游戏曲子均为程序原创生成，可放心使用。
 - 产品名旁边是首字徽章，没有使用任何公司的 logo。
+- 各产品的 AI 娘形象（`site/chars/`）由项目方提供，权利归原作者所有。
 - 桌宠图片来自 dsh-pet 项目（https://github.com/PC2005-cloud/dsh-pet）。
 - 产品热度排序参考：新京报 AI 研究院 2026 年 4–5 月榜单、Similarweb 2026 年数据，部分产品为估计。
 
