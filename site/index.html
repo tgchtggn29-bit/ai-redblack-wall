@@ -2,6 +2,74 @@
 <html lang="zh-CN">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head>
 <body>
+<script>
+/*VOTE-SHIM*/
+/* 自建后端适配：把 claude.use("db"/"user") 用 fetch 实现，轮询同步。
+   仅在非 claude.ai 环境且页面没有原生 window.claude 时启用。 */
+(function(){
+  try {
+    var host = location.hostname || "";
+    if (/claude/i.test(host)) return;
+    if (window.claude && window.claude.use) return;
+    var LS = window.localStorage;
+    var MYID = (function(){ var k="hb_uid", v=LS.getItem(k); if(!v){ v="u_"+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); LS.setItem(k,v);} return v; })();
+    function api(url, opt){
+      opt = opt || {};
+      opt.credentials = "same-origin";
+      opt.headers = Object.assign({"x-user-id":MYID,"x-device-id":MYID}, opt.headers||{});
+      return fetch(url, opt);
+    }
+    var STATE = { votes:{}, notes:{}, rhythm:{}, testers:{} };
+    var listeners = { votes:[], notes:[], rhythm:[], testers:[] };
+    function snapOf(coll){
+      var o = STATE[coll] || {};
+      return { docs: Object.keys(o).map(function(id){ return { id:id, data:function(){ return o[id]; } }; }), metadata:{ hasPendingWrites:false, fromCache:false } };
+    }
+    function emit(coll){ (listeners[coll]||[]).slice().forEach(function(cb){ try{ cb(snapOf(coll)); }catch(e){ console.error(e); } }); }
+    function refresh(){
+      return api("/api/state").then(function(r){ return r.json(); }).then(function(j){
+        if(!j || !j.ok) return;
+        STATE = { votes:j.votes||{}, notes:j.notes||{}, rhythm:j.rhythm||{}, testers:j.testers||{} };
+        for(var c in listeners) emit(c);
+      }).catch(function(){});
+    }
+    setInterval(refresh, 2500);
+    document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") refresh(); });
+    refresh();
+    function collection(coll){ return { onSnapshot:function(cb){ (listeners[coll]=listeners[coll]||[]).push(cb); setTimeout(function(){ cb(snapOf(coll)); },0); } }; }
+    function doc(pth){
+      var p = String(pth).split("/"), coll=p[0], id=p[1];
+      function write(body){
+        return api("/api/state", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ collection:coll, id:id, body:body }) })
+          .then(function(r){ return r.json().catch(function(){ return {}; }); })
+          .then(function(j){
+            if(j && j.ok){ STATE[coll]=STATE[coll]||{}; STATE[coll][id]=body; emit(coll); refresh(); return; }
+            throw new Error((j&&j.error)||"write failed");
+          });
+      }
+      return {
+        set: write,
+        update: function(b){ var cur=(STATE[coll]&&STATE[coll][id])||{}; return write(Object.assign({}, cur, b)); },
+        delete: function(){ return Promise.resolve(); }
+      };
+    }
+    window.claude = {
+      use: function(name){
+        if(name==="db") return Promise.resolve({ collection:collection, doc:doc });
+        if(name==="user") return Promise.resolve({
+          id: function(){ return Promise.resolve(MYID); },
+          isOwner: function(){ return Promise.resolve(false); },
+          can: function(){ return Promise.resolve(true); },
+          profiles: function(){ return Promise.resolve({}); }
+        });
+        return Promise.resolve(null);
+      }
+    };
+    console.log("[vote] 已切换到自建后端 /api");
+  } catch(e){ console.error("[vote shim]", e); }
+})();
+</script>
+
 <title>AI 产品红黑榜</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">

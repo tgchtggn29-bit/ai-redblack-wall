@@ -1,10 +1,12 @@
 {
-  "name": "redblack-anti-abuse",
+  "name": "ai-redblack-vote",
   "version": "1.0.0",
   "private": true,
-  "description": "AI 产品红黑榜 · 防刷后台（按 IP / 账号 / 设备限流）",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "dependencies": { "express": "^4.21.0" },
-  "optionalDependencies": { "ioredis": "^5.4.0" }
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.3"
+  }
 }
