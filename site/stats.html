@@ -106,6 +106,17 @@
 
   <div class="grid">
     <div class="card">
+      <h2>今日分时 <em id="hourly-note">每小时 PV（青色是当前小时）</em></h2>
+      <canvas id="hourly"></canvas>
+    </div>
+    <div class="card">
+      <h2>今日概览 <em id="today-note"></em></h2>
+      <div class="bars" id="today-bars"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
       <h2>实时轨迹 <em id="live-note"><span class="live-dot"></span> 每 10 秒刷新</em></h2>
       <table>
         <thead><tr><th>时间</th><th>访客</th><th>事件</th><th>页面</th><th>详情</th></tr></thead>
@@ -146,7 +157,9 @@
 <script>
 const $ = s => document.querySelector(s);
 const LS = localStorage;
-let TOKEN = LS.getItem("hb-owner-token") || new URLSearchParams(location.search).get("token") || "";
+let TOKEN = LS.getItem("hb-owner-token") || "";
+const URL_TOKEN = new URLSearchParams(location.search).get("token") || "";
+if (URL_TOKEN) { TOKEN = URL_TOKEN; try { LS.setItem("hb-owner-token", URL_TOKEN); } catch (e) {} }
 let DAYS = 7, timer = null, DATA = null;
 
 function fmt(n){ return n >= 10000 ? (n/10000).toFixed(1)+"万" : String(n||0); }
@@ -200,6 +213,14 @@ function render(){
   ].map(([k,v,c]) => `<div class="kpi ${c}"><b>${fmt(v)}</b><small>${k}</small></div>`).join("");
 
   drawChart(d.series);
+  drawHourly(d.hours || []);
+  const hsum = (d.hours || []).reduce((a, b) => a + b, 0);
+  $("#hourly-note").textContent = hsum ? "每小时 PV（青色是当前小时）" : "还没有小时数据，有新访问就会开始记录";
+  const tmax = Math.max(1, d.today.pv, d.today.uv);
+  $("#today-note").textContent = "今天";
+  $("#today-bars").innerHTML = [
+    ["页面浏览 PV", d.today.pv], ["独立访客 UV", d.today.uv], ["上报事件", d.today.events]
+  ].map(([k, v]) => `<div class="bar"><span>${k}</span><i style="width:${Math.max(2, (v / tmax) * 100)}%"></i><u>${v}</u></div>`).join("");
   $("#trend-note").textContent = `PV 柱 / UV 线 · 共 ${d.series.length} 天`;
 
   const fmax = Math.max(1, ...d.funnel.map(x=>x.n));
@@ -330,6 +351,39 @@ function drawChart(series){
   g.fillText("UV", w - padR - 16, padT + 8);
 }
 
+function drawHourly(arr) {
+  const cv = $("#hourly"); if (!cv) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = cv.clientWidth, h = 190;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const padL = 26, padR = 8, padT = 12, padB = 22;
+  const iw = w - padL - padR, ih = h - padT - padB;
+  const max = Math.max(4, ...arr);
+  const data = arr.length ? arr : new Array(24).fill(0);
+  const gap = iw / 24, bw = Math.max(3, gap * 0.62);
+  const nowH = new Date().getHours();
+
+  g.strokeStyle = "rgba(140,180,255,.14)"; g.fillStyle = "#8ea3c7"; g.font = "10px -apple-system,sans-serif";
+  for (let i = 0; i <= 3; i++) {
+    const y = padT + ih * i / 3;
+    g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke();
+    g.fillText(String(Math.round(max * (1 - i / 3))), 3, y + 3);
+  }
+  data.forEach((v, i) => {
+    const bh = (v / max) * ih;
+    const x = padL + gap * i + (gap - bw) / 2;
+    g.fillStyle = i === nowH ? "#00E5FF" : "rgba(37,99,235,.75)";
+    if (bh > 0.5) g.fillRect(x, padT + ih - bh, bw, bh);
+    if (i % 3 === 0) {
+      g.fillStyle = "#8ea3c7"; g.textAlign = "center";
+      g.fillText(i + "", padL + gap * i + gap / 2, h - 7);
+      g.textAlign = "left";
+    }
+  });
+}
+
 // 交互
 document.querySelectorAll("[data-days]").forEach(b => b.onclick = () => {
   document.querySelectorAll("[data-days]").forEach(x => x.classList.remove("on"));
@@ -344,8 +398,9 @@ $("#token").value = TOKEN ? "••••••••" : "";
 $("#token").onfocus = () => { if ($("#token").value.startsWith("•")) $("#token").value = ""; };
 $("#drawer").onclick = e => { if (e.target.id === "drawer") closeDrawer(); };
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
-window.addEventListener("resize", () => DATA && drawChart(DATA.series));
+window.addEventListener("resize", () => { if (DATA) { drawChart(DATA.series); drawHourly(DATA.hours || []); } });
 
+if (URL_TOKEN) { try { history.replaceState(null, "", location.pathname); } catch (e) {} }
 load();
 timer = setInterval(() => { if (!document.hidden) load(); }, 10000);
 </script>

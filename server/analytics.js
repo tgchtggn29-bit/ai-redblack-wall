@@ -20,7 +20,7 @@ const BOT_RE = /bot|spider|crawl|slurp|bingpreview|headless|phantom|python-reque
 const day = (t = Date.now()) => new Date(t + 8 * 3600e3).toISOString().slice(0, 10);
 const hhmm = t => new Date(t + 8 * 3600e3).toISOString().slice(11, 16);
 
-function newDay() { return { pv: 0, sessions: {}, vid: {}, path: {}, ev: {}, ref: {}, dev: {}, br: {} }; }
+function newDay() { return { pv: 0, sessions: {}, vid: {}, path: {}, ev: {}, ref: {}, dev: {}, br: {}, hour: {} }; }
 
 let STATS = {
   v: 1,
@@ -145,6 +145,9 @@ module.exports = function analytics({ file, ownerToken, trustProxyDir = null }) 
 
       if (ev === "pageview") {
         D.pv++;
+        const hh = String(new Date(t + 8 * 3600e3).getUTCHours());
+        if (!D.hour) D.hour = {};
+        D.hour[hh] = (D.hour[hh] || 0) + 1;
         D.path[pth] = (D.path[pth] || 0) + 1;
         D.ref[refHost] = (D.ref[refHost] || 0) + 1;
         D.dev[dev] = (D.dev[dev] || 0) + 1;
@@ -214,6 +217,7 @@ module.exports = function analytics({ file, ownerToken, trustProxyDir = null }) 
         events: series.reduce((a, b) => a + b.events, 0),
       },
       today: { pv: D0.pv, uv: Object.keys(D0.vid).length, events: Object.values(D0.ev).reduce((a, b) => a + b, 0) },
+      hours: Array.from({ length: 24 }, (_, h) => (D0.hour || {})[String(h)] || 0),
       online,
       series,
       funnel,
