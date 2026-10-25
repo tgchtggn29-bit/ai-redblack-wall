@@ -506,7 +506,9 @@ table.lb { width: 100%; border-collapse: separate; border-spacing: 0 6px; min-wi
 .lock-note { display: none; }
 body:not(.revealed) .lock-note { display: block; margin-top: 18px; padding: 14px 16px; border-radius: 14px; background: var(--tile-head); color: var(--muted); font-weight: 600; text-align: center; }
 body:not(.revealed) #graph-view, body:not(.revealed) #rank-view { filter: blur(6px) grayscale(.6); opacity: .45; pointer-events: none; user-select: none; }
-.stk.rv { animation: rvIn .5s cubic-bezier(.2,1.5,.4,1) both; }
+.stk.rv { animation: rvIn .55s cubic-bezier(.2,1.5,.4,1) both; }
+.stk.rv.fresh { animation: rvIn .55s cubic-bezier(.2,1.5,.4,1) both, freshGlow 2.4s ease-out both; }
+@keyframes freshGlow { 0%, 20% { box-shadow: 0 0 0 3px var(--board), 0 0 0 6px var(--accent-draft), 0 0 16px 6px var(--accent-draft); } 100% { box-shadow: 0 1px 0 var(--shadow); } }
 @keyframes rvIn { from { transform: translate(-50%, -50%) scale(0); opacity: 0; } }
 .stk.mini { border-width: 1px; box-shadow: none; }
 .stk.mini::before, .stk.mini::after { display: none; }
@@ -970,6 +972,8 @@ function testing() { return isOwnerUser && testMode; }
 
 // 盲投：提交第一次打卡前只看得到自己的贴纸；提交后揭晓全网真实贴纸墙
 let revealed = false, revealAnim = false;
+// 别人的贴纸“渐渐出现”：记住已经显示过的贴纸，新出现的按投票时间先后一张张落下
+const seenStk = new Set(); let wallPrimed = false;
 const demoIds = new Set(); // 运营放进来的示例打卡（文档带 demo: true），页面上明确标注为示例
 try { revealed = localStorage.getItem("hb-revealed") === "1"; } catch (e) {}
 function isRevealed() { return revealed || Object.keys(savedPicks).length > 0 || (mySub && mySub.n > 0); }
@@ -1017,6 +1021,22 @@ function render() {
   $("st-people").textContent = people;
   $("st-mine").textContent = Object.keys(myPicks).length + (isFinite(LIMITS.MAX_VOTES) ? "/" + LIMITS.MAX_VOTES : "");
 
+  // 找出这次新出现的别人的贴纸，按投票时间排好，分配依次出现的延迟
+  const enterDelay = new Map();
+  {
+    const fresh = [];
+    for (const [pid, list] of Object.entries(byProduct)) for (const p of list) {
+      if (p.mine) continue;
+      const k = p.uid + "|" + pid + "|" + (p.i == null ? -1 : p.i);
+      if (!seenStk.has(k)) fresh.push([k, p.t || 0]);
+    }
+    if (fresh.length && open) {
+      fresh.sort((a, b) => a[1] - b[1]);
+      const span = wallPrimed ? Math.min(2.4, fresh.length * .35) : Math.min(5.5, 1.2 + fresh.length * .08);   // 首次铺墙约 1–5 秒，之后的新票逐张冒出
+      const step = fresh.length > 1 ? span / (fresh.length - 1) : 0;
+      fresh.forEach(([k], i) => { enterDelay.set(k, (i * step).toFixed(2)); seenStk.add(k); });
+    }
+  }
   const sizes = {}; for (const [pid, t] of Object.entries(tiles)) sizes[pid] = [t.field.clientWidth || 140, t.field.clientHeight || 80]; // 先统一读尺寸，避免边写边读引发反复重排
   for (const [pid, t] of Object.entries(tiles)) {
     const list = (byProduct[pid] || []).sort((a, b) => a.t - b.t);
@@ -1042,7 +1062,7 @@ function render() {
     const s = Math.round(Math.max(5, Math.min(24, Math.sqrt(fw * fh / Math.max(draw.length, 1)) * .75)));
     const mini = s < 11;
     // 只重画有变化的格子：人多时整墙几千张贴纸，每次全部重建会卡
-    const sig = [open, revealAnim, s, mode, justPlaced === pid, JSON.stringify(myPicks[pid] || 0), JSON.stringify(savedPicks[pid] || 0),
+    const sig = [open, (byProduct[pid] || []).some(p => !p.mine && enterDelay.has(p.uid + "|" + pid + "|" + (p.i == null ? -1 : p.i))) ? Math.random() : 0, s, mode, justPlaced === pid, JSON.stringify(myPicks[pid] || 0), JSON.stringify(savedPicks[pid] || 0),
       window.EggBook && EggBook.gold.has(pid), list.map(p => p.uid + p.v + p.t + p.d.length + p.x).join()].join("|");
     if (t.sig === sig) continue;
     t.sig = sig;
@@ -1053,8 +1073,8 @@ function render() {
     let html = "";
     for (const p of draw) {
       const cls = "stk" + (p.v === "down" ? " down" : "") + (mini && !p.mine ? " mini" : "") + (p.mine ? " mine" : "") + (p.mine && draftMine ? " draft" : "")
-        + (p.mine && justPlaced === pid && p.i === lastI ? " pop" : "") + (revealAnim && !p.mine ? " rv" : "") + (p.mine && goldMine ? " gold" : "");
-      const st = `left:${(p.x * 100).toFixed(2)}%;top:${(p.y * 100).toFixed(2)}%;--s:${p.mine ? Math.max(s, 14) : s}px` + (revealAnim && !p.mine ? `;animation-delay:${(Math.random() * 1.2).toFixed(2)}s` : "");
+        + (p.mine && justPlaced === pid && p.i === lastI ? " pop" : "") + (!p.mine && enterDelay.has(p.uid + "|" + pid + "|" + (p.i == null ? -1 : p.i)) ? (wallPrimed ? " rv fresh" : " rv") : "") + (p.mine && goldMine ? " gold" : "");
+      const st = `left:${(p.x * 100).toFixed(2)}%;top:${(p.y * 100).toFixed(2)}%;--s:${p.mine ? Math.max(s, 14) : s}px` + (!p.mine && enterDelay.has(p.uid + "|" + pid + "|" + (p.i == null ? -1 : p.i)) ? `;animation-delay:${enterDelay.get(p.uid + "|" + pid + "|" + (p.i == null ? -1 : p.i))}s` : "");
       const g = p.v === "down" ? "✕" : "✓";
       html += p.mine
         ? `<button type="button" class="${cls}" style="${st}" data-i="${p.i}" title="${draftMine ? "未提交 · " : ""}点击撕掉这一张" aria-label="撕掉我在 ${t.name} 的一张贴纸"><span>${g}</span></button>`
@@ -1067,6 +1087,7 @@ function render() {
     t.el.setAttribute("aria-label", `${t.name}：好评 ${up}，差评 ${down}。按回车贴${mode === "up" ? "好评" : "差评"}`);
   }
   justPlaced = null; revealAnim = false;
+  if (open && enterDelay.size) wallPrimed = true;
   syncTools();
   if (graphOn) Graph.update();
   renderBoard();
