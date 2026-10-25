@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="js/track.js" defer></script>
+<script src="js/share.js" defer></script>
 </head>
 <body>
 <script>
@@ -753,6 +754,22 @@ body.night .stk:not(.mini) { box-shadow: 0 0 8px 1px rgba(255, 210, 120, .6); }
 .src-link b{display:block;font-size:13px;}
 .src-link small{display:block;font-size:10.5px;color:var(--muted);}
 .stats{flex-wrap:wrap;}
+/* ---------- 分享面板 ---------- */
+.tool.share { background: var(--olive); color: #fff; border-color: var(--edge); font-weight: 800; }
+.tool.share:hover { filter: brightness(1.08); }
+.share-scrim { position: fixed; inset: 0; z-index: 40; background: rgba(10,12,8,.64); display: grid; place-items: center; padding: 14px; }
+.share-scrim[hidden] { display: none; }
+.share-sheet { width: min(430px, 100%); max-height: 94vh; overflow: auto; background: var(--board); color: var(--ink);
+  border: 5px solid var(--olive); border-radius: 24px; padding: 18px 16px 14px; position: relative; box-shadow: 0 30px 70px rgba(0,0,0,.42); }
+.share-sheet h2 { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1; margin: 0 0 4px; }
+.share-sheet .ssub { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0 0 12px; }
+.share-x { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid var(--edge); background: var(--tile); color: var(--ink); font-size: 14px; cursor: pointer; }
+.share-card-wrap { border-radius: 14px; overflow: hidden; box-shadow: 0 10px 24px rgba(0,0,0,.28); margin-bottom: 12px; }
+#share-canvas { display: block; width: 100%; height: auto; background: #0B132B; }
+.share-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.share-tip { color: var(--muted); font-size: 11.5px; line-height: 1.5; text-align: center; margin: 10px 0 0; }
+@media (max-width: 520px) { .share-sheet { padding: 14px 12px 12px; } .share-sheet h2 { font-size: 26px; } }
 </style>
 
 <div class="wrap">
@@ -813,6 +830,7 @@ body.night .stk:not(.mini) { box-shadow: 0 0 8px 1px rgba(255, 210, 120, .6); }
     <div class="tools" id="tools">
       <button class="tool" id="undo" data-sfx="own" type="button" disabled title="撤回上一步（Ctrl/⌘ + Z）">↶ 撤回</button>
       <button class="tool danger" id="reset" data-sfx="own" type="button" disabled>重置我的贴纸</button>
+      <button class="tool share" id="share" data-sfx="own" type="button" title="做成卡片分享给朋友">↗ 分享</button>
       <button class="tool test-toggle" id="test-toggle" data-sfx="own" type="button" hidden aria-pressed="true">🧪 测试模式：每张都算一票</button>
       <span class="confirm" id="reset-confirm" hidden>清空你贴的全部 <span id="reset-n">0</span> 张？
         <button class="tool danger solid" id="reset-yes" data-sfx="own" type="button">确认清空</button>
@@ -3007,5 +3025,20 @@ buildBoard(); render();
 })();
 </script>
 
+
+<!-- 分享面板 -->
+<div class="share-scrim" id="share-scrim" hidden>
+  <div class="share-sheet" role="dialog" aria-modal="true" aria-labelledby="share-title">
+    <button class="share-x" id="share-x" type="button" aria-label="关闭">✕</button>
+    <h2 id="share-title">分享这面墙</h2>
+    <p class="ssub">朋友扫码就能直接来贴；也可以把卡片存下来发到微信</p>
+    <div class="share-card-wrap"><canvas id="share-canvas" width="900" height="1200"></canvas></div>
+    <div class="share-actions">
+      <button class="big-btn" id="share-save" type="button">保存卡片</button>
+      <button class="big-btn alt" id="share-copy" type="button">复制链接</button>
+    </div>
+    <p class="share-tip" id="share-tip">微信里长按卡片可保存图片，再转发给朋友</p>
+  </div>
+</div>
 </body>
 </html>

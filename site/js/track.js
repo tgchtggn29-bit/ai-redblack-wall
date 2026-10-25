@@ -50,7 +50,8 @@
     sw: screen.width, sh: screen.height,
     lang: navigator.language,
     tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || "").slice(0, 30),
-    ref: (document.referrer || "").slice(0, 120)
+    ref: (document.referrer || "").slice(0, 120),
+    qs: (location.search || "").slice(0, 60)
   });
 
   // —— 停留心跳：可见时每 30 秒打点（用于算停留时长）
