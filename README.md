@@ -4,7 +4,7 @@
 
 ![首页](docs/screenshots/01_hero_blind.jpg)
 
-▶ **宣传讲解视频（87 秒，带字幕）**：[docs/video/promo.mp4](docs/video/promo.mp4)
+▶ **宣传视频**：[30 秒精简版](docs/video/promo-30s.mp4) · [87 秒完整讲解版](docs/video/promo.mp4)
 
 ## 截图
 
