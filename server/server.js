@@ -199,6 +199,11 @@ app.get("/api/summary", (_req, res) => {
   res.json({ ok: true, products: sum, voters: Object.keys(DATA.votes).length });
 });
 
+// ======================= 访问统计 + 行为轨迹 =======================
+const analytics = require("./analytics");
+const STATS_FILE = process.env.STATS_FILE || path.join(__dirname, "stats.json");
+app.use("/api", analytics({ file: STATS_FILE, ownerToken: OWNER_TOKEN }));
+
 // 健康检查
 app.get("/api/health", (_req, res) => res.json({ ok: true, voters: Object.keys(DATA.votes).length, notes: Object.keys(DATA.notes).length }));
 

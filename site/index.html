@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="js/track.js" defer></script>
+</head>
 <body>
 <script>
 /*VOTE-SHIM*/
@@ -1315,6 +1316,7 @@ function placePick(pid, x, y) {
     toast(`每人最多投 ${LIMITS.MAX_VOTES} 票。想投「${NAME[pid]}」，先撕掉别的一票，或点“重置我的贴纸”重新打卡`);
     return false;
   }
+  try { window.track && track("vote.place", { pid: pid, v: mode }); } catch (_e) {}
   if (!cur) {
     myPicks = { ...myPicks, [pid]: { v: mode, x: xy[0], y: xy[1], t: Date.now(), d: [] } };
     toast(`「${NAME[pid]}」贴上${label}，记得提交`);
@@ -1424,7 +1426,7 @@ async function submit(auto) {
     + (testing() ? ` 测试模式：多贴的 ${vals.reduce((n, p) => n + (p.d || []).length, 0)} 张也各算一票。` : "");
   if (auto !== "hide") { Sfx.play("submit"); setTimeout(() => Egg.say("submit"), 700); setTimeout(() => { $("done").hidden = false; $("go-wall").focus(); }, 2000); }
 }
-$("submit").onclick = () => submit(false);
+$("submit").onclick = () => { try { window.track && track("vote.submit", { n: Object.keys(myPicks).length }); } catch (_e) {} submit(false); };
 $("discard").onclick = () => { Sfx.play("undo"); snapshot(); myPicks = JSON.parse(JSON.stringify(savedPicks)); render(); syncSubmitBar(); syncTools(); toast("已放弃未提交的改动，点“撤回”可以找回"); };
 for (const ev of ["pointerdown", "keydown", "wheel"]) document.addEventListener(ev, () => { if (pendingCount()) lastActivity = Date.now(); }, { passive: true });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && pendingCount()) submit("hide"); });
@@ -1493,6 +1495,7 @@ $("note-form").addEventListener("submit", e => {
   if (noteDay.n >= LIMITS.MAX_NOTES_PER_DAY) { Sfx.play("error"); toast(`今天已经发了 ${LIMITS.MAX_NOTES_PER_DAY} 条留言，明天再聊吧`); return; }
   noteDay = { day: today(), n: noteDay.n + 1 };
   myNotes = [{ pid: $("note-product").value || "", text, t: Date.now() }, ...myNotes].slice(0, 20);
+  try { window.track && track("note.post", { pid: $("note-product").value || "none", len: text.length }); } catch (_e) {}
   $("note-text").value = ""; $("note-left").textContent = "0 / 140";
   renderNotes(); saveNotes(); Sfx.play("note"); toast("留言已发布");
 });
@@ -1833,6 +1836,7 @@ document.querySelectorAll(".sorts button").forEach(b => b.onclick = () => {
 // 三块内容上下排列，往下滑就能看到；顶部标签只负责快速跳转
 let graphOn = false;
 function setView(v) {
+  try { window.track && track("view.switch", { v: v }); } catch (_e) {}
   const el = { wall: $("board"), graph: $("sec-graph"), rank: $("rank-view"), community: $("community-view") }[v];
   if (el) el.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 }
@@ -2785,6 +2789,7 @@ const EggBook = window.EggBook = (() => {
   function found(id) {
     if (got[id]) return; const e = LIST.find(x => x[0] === id); if (!e) return;
     got[id] = Date.now(); try { localStorage.setItem("hb-eggs", JSON.stringify(got)); } catch (err) {}
+    try { window.track && track("egg.unlock", { id: id }); } catch (_e) {}
     sync();
     const pop = document.createElement("div"); pop.className = "egg-pop";
     pop.textContent = `${e[1]} 发现彩蛋：${e[2]}`; const sm = document.createElement("small"); sm.textContent = `图鉴 ${count()}/${LIST.length}`; pop.append(sm);
