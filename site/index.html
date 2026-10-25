@@ -693,6 +693,13 @@ body.night .stk:not(.mini) { box-shadow: 0 0 8px 1px rgba(255, 210, 120, .6); }
 .side-card.qr img{width:72px;height:72px;border-radius:10px;background:#fff;object-fit:contain;}
 .side-card.qr b{font-size:15px;display:block;}
 .side-card.qr small{color:var(--muted);font-size:12px;display:block;line-height:1.4;}
+
+.src-link{margin-left:auto;align-self:center;display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:2px solid var(--edge);border-radius:12px;background:var(--tile);color:var(--ink);text-decoration:none;line-height:1.2;white-space:nowrap;}
+.src-link:hover{background:var(--tile-head);}
+.src-link .src-ico{font-size:17px;line-height:1;}
+.src-link b{display:block;font-size:13px;}
+.src-link small{display:block;font-size:10.5px;color:var(--muted);}
+.stats{flex-wrap:wrap;}
 </style>
 
 <div class="wrap">
@@ -710,6 +717,10 @@ body.night .stk:not(.mini) { box-shadow: 0 0 8px 1px rgba(255, 210, 120, .6); }
       <button class="sound" id="bgm" type="button" aria-pressed="true" data-sfx="none" title="背景音乐开关">♫ BGM 开</button>
       <button class="sound" id="bgm-next" type="button" data-sfx="none" title="换一首">⏭ 换歌</button>
       <button class="sound egg-chip" id="egg-chip" type="button" data-sfx="own" title="彩蛋图鉴">🥚 彩蛋 <span id="egg-n">0</span>/9</button>
+      <a class="src-link" href="https://github.com/tgchtggn29-bit/ai-redblack-wall" target="_blank" rel="noopener" title="查看开源源码">
+        <span class="src-ico">⌨</span>
+        <span><b>开源源码</b><small>GitHub · 一键访问</small></span>
+      </a>
     </div>
     </div>
     <aside class="side" aria-label="开发者与合作">
