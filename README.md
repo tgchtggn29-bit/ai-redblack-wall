@@ -1,5 +1,10 @@
 # AI 产品红黑榜
 
+## 👉 在线体验：https://vote.wqai.ltd
+
+打开就能贴纸打卡，不用登录、不用装任何东西，手机端也适配好了。
+源码仓库：https://github.com/tgchtggn29-bit/ai-redblack-wall
+
 > 一面在线贴纸投票墙：举起"好评 ✓ / 差评 ✕"牌，给 AI 产品打卡。灵感来自线下展会的投票墙。
 
 ![首页](docs/screenshots/01_hero_blind.jpg)
@@ -47,7 +52,7 @@
 
 在线贴纸投票墙：访客举着"好评 ✓ / 差评 ✕"牌给 AI 产品打卡。提交后揭晓全网真实打卡墙，往下滑能看到喜恶星云、滚动留言和排行榜（柱状图）。页面还带原创 BGM、9 个彩蛋和防刷机制。
 
-当前线上版本运行在 claude.ai（第 24 版），已通过 26 项端到端测试，详见文末。
+当前线上版本：**https://vote.wqai.ltd** —— 自建 Node 后端（`server/server.js`）+ Nginx 限流 + Let's Encrypt HTTPS，已通过 26 项端到端测试，详见文末。
 
 ---
 
@@ -72,22 +77,29 @@ extras/
 
 ## 上线方式（务必先读）
 
-### 方式 A：继续用 claude.ai 上的版本（推荐，现成可用）
-页面已经发布在 claude.ai，投票、留言、排行榜、测试名单的数据也都存在那里，可以直接用。
+### 方式 A：直接用线上版本（推荐）
+https://vote.wqai.ltd 已经跑起来了，投票、留言、节奏榜、彩蛋图鉴的数据都在这台服务器上（`/var/www/vote/data.json`），打开就能用，不需要登录。
 
-1. 打开页面右上角的"分享"。
-2. 把访问权限设为"贡献者"，访客才能贴纸。设为"查看者"的人只能看、不能贴。
-3. 访客需要登录 claude.ai。
+### 方式 B：部署到你自己的服务器
+后端 `server/server.js` 已经覆盖页面需要的全部接口，不需要改前端：
 
-### 方式 B：部署到自己的服务器（如腾讯云）
-`site/index.html` 可以直接放到任意静态服务器上打开，但**数据功能要改代码才能用**。
+| 接口 | 用途 |
+|---|---|
+| `GET /api/state` | 拉全量状态（票、留言、节奏榜、测试名单） |
+| `POST /api/votes` | 提交打卡（带防刷） |
+| `POST /api/notes` | 发留言 |
+| `POST /api/rhythm` | 节奏小游戏上分 |
+| `POST /api/testers` | 维护测试账号名单 |
 
-- **原因**：页面的数据读写（投票、留言、节奏游戏排行榜、测试账号名单）和"当前是谁"都依赖 claude.ai 提供的 `window.claude.use("db")` 和 `use("user")` 接口，在别的网站上这两个接口不存在。
-- **直接部署的后果**：页面能正常显示，也能贴纸，但提交不会保存，看不到别人的票，状态栏会提示"在 claude.ai 中打开这个页面才能贴纸"。
-- **要在自己服务器上真正跑起来，需要三步**：
-  1. **登录**：给网站加用户登录，用微信、手机号等都行，用来替代 `user.id()`。
-  2. **接口**：用 `server/server.js` 作为后端。它已经提供了 `POST /api/votes`（提交打卡，带防刷）和 `GET /api/summary`（汇总）。留言、节奏游戏排行榜、测试名单的接口需要按同样方式补上。
-  3. **改页面**：把页面里 `claude.use("db")` 的读写，改成调用上面这些接口（可以用轮询或 WebSocket 实现实时更新）。
+页面顶部注入了一段 `/*VOTE-SHIM*/`，把原来的 `claude.use("db")` 换成了 `fetch` 轮询这套接口，并用 localStorage 里的随机 uid 作为身份（放在 `x-user-id` 头里）。所以：
+
+1. 装 Node 18+，`cd server && npm install`。
+2. `PORT=3000 OWNER_TOKEN=你的口令 node server.js`（口令用于解锁测试模式）。
+3. 前面挂 Nginx 反代，限流配置见 `deploy/nginx-vote.conf`；systemd 单元见 `deploy/vote.service`。
+4. 只想要静态预览也完全可以：`site/index.html` 直接用浏览器打开就能看，只是提交不会保存。
+
+### 方式 C：放回 claude.ai
+原版数据层依赖 claude.ai 的 `window.claude.use("db")` / `use("user")`。要放回去就把页面顶部的 `/*VOTE-SHIM*/` 那段删掉，然后在 claude.ai 里把访问权限设为"贡献者"，访客才能贴纸。
 
 ---
 
