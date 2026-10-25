@@ -208,7 +208,11 @@ app.use("/api", analytics({ file: STATS_FILE, ownerToken: OWNER_TOKEN }));
 app.get("/api/health", (_req, res) => res.json({ ok: true, voters: Object.keys(DATA.votes).length, notes: Object.keys(DATA.notes).length }));
 
 // ======================= 静态站 =======================
-app.use(express.static(SITE_DIR, { extensions: ["html"], maxAge: "1h" }));
+app.use(express.static(SITE_DIR, {
+  extensions: ["html"], maxAge: "1h",
+  // HTML 不缓存：改版后手机端立刻生效；静态资源仍缓存 1 小时
+  setHeaders(res, file) { if (/\.html?$/i.test(file)) res.setHeader("Cache-Control", "no-store"); }
+}));
 app.get("*", (req, res) => { // 兜底回首页
   if (req.path.startsWith("/api/")) return res.status(404).json({ ok: false, error: "not found" });
   res.sendFile(path.join(SITE_DIR, "index.html"));

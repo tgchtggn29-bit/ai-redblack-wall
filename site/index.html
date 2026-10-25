@@ -153,7 +153,15 @@ header.top { display: grid; grid-template-columns: minmax(0, 1fr) 356px; gap: 16
 .ad-tag { font: 800 9.5px/1 var(--font-body); letter-spacing: .1em; color: var(--muted); border: 1.5px solid var(--muted); border-radius: 5px; padding: 4px 5px; }
 
 @media (max-width: 900px) { header.top { grid-template-columns: minmax(0, 1fr); } .side { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-top: 0; } }
-@media (max-width: 520px) { .side { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) {
+  .side { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .side-card { padding: 8px 9px; }
+  .side-card.pet { grid-template-columns: 34px minmax(0, 1fr); gap: 4px 6px; }
+  .side-card.pet > img { width: 34px; height: 42px; border-radius: 8px; }
+  .side-card .mini-btn { font-size: 10px; padding: 4px 5px; }
+  .side-card.qr { grid-template-columns: 46px minmax(0, 1fr); gap: 6px; }
+  .side-card.qr img { width: 46px; height: 46px; }
+}
 h1 {
   font-family: var(--font-display); font-weight: 400; margin: 0;
   font-size: clamp(44px, 9vw, 88px); line-height: .95; letter-spacing: .02em; text-wrap: balance;
@@ -639,6 +647,40 @@ body.night .stk:not(.mini) { box-shadow: 0 0 8px 1px rgba(255, 210, 120, .6); }
 
 @media (max-width: 1100px) { .board { --cols: 5; } }
 @media (max-width: 820px) { .board { --cols: 3; } }
+
+/* ===== 手机端打卡优化：2×2 并排（两列整齐、格子更大、更好点） ===== */
+@media (max-width: 620px) {
+  .board { gap: 8px; padding: 10px; border-width: 4px; border-radius: 20px; grid-auto-rows: 126px; }
+  /* 手机上取消所有跨列/跨行：40 个产品统一排成两列并排，节奏一致、好点好贴 */
+  .board .tile.big, .board .tile.wide, .board .tile.tall { grid-column: span 1; grid-row: span 1; }
+  .tile { border-radius: 12px; }
+  .tile-head { padding: 7px 9px; gap: 7px; }
+  .name { font-size: 14px; }
+  .co { font-size: 10.5px; }
+  .big .name { font-size: 16px; }
+  .big .co { font-size: 11.5px; }
+  .badge { width: 27px; height: 27px; font-size: 13px; }
+  .big .badge { width: 32px; height: 32px; font-size: 15px; border-radius: 9px; }
+  .tally { font-size: 11.5px; }
+  .field { margin: 5px 7px 7px; min-height: 54px; }
+  .empty-hint { font-size: 12.5px; }
+  .stats { gap: 12px; flex-wrap: wrap; }
+  .sub { font-size: 13px; line-height: 1.6; }
+}
+@media (max-width: 820px) and (min-width: 621px) {
+  .board { gap: 9px; padding: 12px; }
+  .field { margin: 5px 7px 7px; }
+}
+@media (max-width: 620px) {
+  /* 手机上取消点击时的灰块，去掉长按菜单 */
+  .board .tile, .stk, .sound, .mini-btn, .tile-head { -webkit-tap-highlight-color: transparent; }
+  .stk { -webkit-touch-callout: none; }
+}
+@media (max-width: 400px) {
+  .board { grid-auto-rows: 116px; gap: 7px; padding: 9px; }
+  .name { font-size: 13px; }
+  .big .name { font-size: 15px; }
+}
 
 /* live wall tag + reveal curtain */
 .live-tag { scroll-margin-top: 110px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 16px; border-radius: 14px; border: 2px solid #1c1e19; background: var(--tile); font-size: 14px; }
