@@ -1,0 +1,85 @@
+import sys, asyncio, json
+from playwright.async_api import async_playwright
+SEED = open(sys.argv[2]).read()
+R = []
+def ok(name, cond, extra=""): R.append(("PASS" if cond else "FAIL", name, extra))
+async def main():
+    async with async_playwright() as p:
+        b = await p.chromium.launch(args=["--autoplay-policy=no-user-gesture-required"])
+        ctx = await b.new_context(viewport={"width":1280,"height":900}, timezone_id="Asia/Shanghai")
+        pg = await ctx.new_page(); errs=[]; cons=[]
+        pg.on("pageerror", lambda e: errs.append(str(e)))
+        pg.on("console", lambda m: m.type == "error" and cons.append(m.text))
+        await pg.goto("file:///home/claude/vote-wall/index.html"); await pg.evaluate("localStorage.clear()")
+        await pg.goto("file:///home/claude/vote-wall/index.html")
+        await pg.evaluate(SEED)
+        await pg.evaluate("revealed=false; db = {doc: () => ({set: async () => {}}), collection: () => ({onSnapshot(){return()=>{}}})}; myId = 'me'; canWrite = true; render();")
+        ok("盲投：提交前只看自己的墙", await pg.evaluate("!document.getElementById('blind').hidden && AGG.total===0"))
+        await pg.evaluate("document.querySelector('.tile[data-pid=kimi]').scrollIntoView({block:'center'})")
+        for i in range(4): await pg.locator('.tile[data-pid="kimi"] .field').click(position={"x":30+i*30,"y":40}, force=True); await pg.wait_for_timeout(60)
+        ok("同一产品点 4 下只算 1 票", await pg.evaluate("(AGG.byProduct.kimi||[]).length===1"))
+        ok("提交栏出现", await pg.evaluate("!document.getElementById('submit-bar').hidden"))
+        await pg.click("#undo", force=True)
+        ok("撤回一步", await pg.evaluate("myPicks.kimi && myPicks.kimi.d.length===2"))
+        await pg.evaluate("submit(false)"); await pg.wait_for_timeout(2500)
+        ok("提交后揭晓全网墙", await pg.evaluate("document.body.classList.contains('revealed') && AGG.total>1"))
+        ok("提交后多贴合并成 1 张", await pg.evaluate("document.querySelectorAll('.tile[data-pid=kimi] .stk.mine').length===1"))
+        ok("成功卡片延迟弹出", await pg.evaluate("!document.getElementById('done').hidden"))
+        ok("成功卡片按钮顺序", await pg.evaluate("[...document.querySelectorAll('.sheet .big-btn.boxed')].map(b=>b.id).filter(i=>i.startsWith('go-')).join()==='go-wall,go-nebula,go-rank'"))
+        await pg.evaluate("closeDone()")
+        await pg.evaluate("submit(false)"); 
+        ok("3 秒内连提被拦", "太快" in (await pg.inner_text("#toast")) or await pg.evaluate("pendingCount()===0"))
+        await pg.click('#reset', force=True); await pg.click('#reset-yes', force=True)
+        ok("重置我的贴纸", await pg.evaluate("Object.keys(myPicks).length===0"))
+        await pg.keyboard.press("Control+z")
+        ok("Ctrl+Z 恢复", await pg.evaluate("Object.keys(myPicks).length===1"))
+        # 排行榜
+        await pg.click('.sorts button[data-sort="hot"]')
+        ok("排行榜柱状图 15 根 + 展开", await pg.evaluate("document.querySelectorAll('#cc .cc-col').length===15 && !document.getElementById('cc-more').hidden"))
+        await pg.click("#cc-more"); ok("展开全部 40", await pg.evaluate("document.querySelectorAll('#cc .cc-col').length===40"))
+        # 星云
+        await pg.locator("#graph-view").scroll_into_view_if_needed(); await pg.wait_for_timeout(1500)
+        ok("星云运行", await pg.evaluate("graphOn===true"))
+        ok("留言滚动列表有内容", await pg.evaluate("document.querySelectorAll('#tk-list li').length>=30"))
+        # 留言
+        await pg.evaluate("document.getElementById('fab').click()"); await pg.fill("#note-text", "测试留言"); await pg.evaluate("document.getElementById('note-form').requestSubmit()")
+        ok("发留言", await pg.evaluate("myNotes.length===1"))
+        await pg.evaluate("document.getElementById('close').click()")
+        # 彩蛋
+        await pg.evaluate("window.scrollTo(0,0)")
+        for i in range(3): await pg.click("#t-red", force=True)
+        await pg.wait_for_timeout(400)
+        ok("彩蛋：红黑颠倒", await pg.evaluate("document.getElementById('title').classList.contains('swap')"))
+        await pg.evaluate("Rhythm.open()"); await pg.wait_for_timeout(300)
+        ok("节奏小游戏打开", await pg.evaluate("!document.getElementById('rg').hidden"))
+        await pg.keyboard.press("Escape"); ok("节奏小游戏关闭", await pg.evaluate("document.getElementById('rg').hidden"))
+        # 蓄力
+        await pg.evaluate("document.querySelector('.tile[data-pid=gemini]').scrollIntoView({block:'center'})")
+        box = await pg.locator('.tile[data-pid="gemini"] .field').bounding_box()
+        await pg.mouse.move(box["x"]+60, box["y"]+60); await pg.mouse.down(); await pg.wait_for_timeout(1200); await pg.mouse.up(); await pg.wait_for_timeout(700)
+        ok("蓄力重压贴上", await pg.evaluate("!!myPicks.gemini"))
+        # 测试模式
+        await pg.evaluate("isOwnerUser=true; testMode=true; render()")
+        await pg.evaluate("document.querySelector('.tile[data-pid=gemini]').scrollIntoView({block:'center'})")
+        for i in range(3): await pg.locator('.tile[data-pid="gemini"] .field').click(position={"x":40+i*30,"y":90}, force=True); await pg.wait_for_timeout(60)
+        ok("测试模式每张算一票", await pg.evaluate("(AGG.byProduct.gemini||[]).filter(p=>p.mine).length===4"))
+        await pg.evaluate("isOwnerUser=false; testMode=false; render()")
+        ok("关测试模式回到 1 票", await pg.evaluate("(AGG.byProduct.gemini||[]).filter(p=>p.mine).length===1"))
+        ok("无横向滚动(桌面)", await pg.evaluate("document.documentElement.scrollWidth<=innerWidth"))
+        # 深色
+        await pg.emulate_media(color_scheme="dark"); await pg.wait_for_timeout(200)
+        bg = await pg.evaluate("getComputedStyle(document.body).backgroundColor")
+        ok("深色模式背景生效", bg != "rgb(232, 234, 226)", bg)
+        await pg.screenshot(path=sys.argv[1]+"/full_dark.png")
+        # 手机
+        m = await b.new_page(viewport={"width":390,"height":844}, has_touch=True); merrs=[]
+        m.on("pageerror", lambda e: merrs.append(str(e)))
+        await m.goto("file:///home/claude/vote-wall/index.html"); await m.evaluate(SEED); await m.evaluate("revealed=true; render()")
+        sw = await m.evaluate("document.documentElement.scrollWidth")
+        ok("手机宽度无横向滚动", sw <= 390, f"scrollWidth={sw}")
+        await m.screenshot(path=sys.argv[1]+"/full_phone.png", full_page=False)
+        ok("无页面脚本错误", not errs and not merrs, "; ".join(errs+merrs)[:300])
+        ok("无控制台报错(除字体被沙箱拦截)", not [c for c in cons if "fonts" not in c and "ERR_" not in c], "; ".join(cons)[:200])
+        await b.close()
+    for r in R: print(*r)
+asyncio.run(main())
